@@ -69,9 +69,9 @@ class CloudConversionResult(ConversionResult):
                 
                 # Log the request
                 if self.cloud_processor.api_key:
-                    logger.info(f"Making cloud API call with API key for {output_type} on {self.file_path}")
+                    logger.info(f"Making cloud API call with authenticated access for {output_type} on {self.file_path}")
                 else:
-                    logger.info(f"Making cloud API call without API key (rate-limited) for {output_type} on {self.file_path}")
+                    logger.info(f"Making cloud API call without authentication (free tier) for {output_type} on {self.file_path}")
                 
                 # Make API request
                 response = requests.post(
@@ -86,14 +86,17 @@ class CloudConversionResult(ConversionResult):
                 if response.status_code == 429:
                     if not self.cloud_processor.api_key:
                         error_msg = (
-                            "Rate limit exceeded for free tier usage. "
-                            "To get unlimited access, please provide an API key from https://app.nanonets.com/#/keys\n"
-                            "Usage: DocumentExtractor(api_key='your_api_key_here')"
+                            "Rate limit exceeded for free tier (limited calls daily). "
+                            "Run 'docstrange login' for 10,000 docs/month, or use an API key from https://app.nanonets.com/#/keys.\n"
+                            "Examples:\n"
+                            "  - CLI: docstrange login\n"
+                            "  - Python: DocumentExtractor()  # after login (uses cached credentials)\n"
+                            "  - Python: DocumentExtractor(api_key='YOUR_API_KEY')  # alternative"
                         )
                         logger.error(error_msg)
                         raise ConversionError(error_msg)
                     else:
-                        error_msg = "Rate limit exceeded even with API key. Please try again later."
+                        error_msg = "Rate limit exceeded (10k/month). Please try again later."
                         logger.error(error_msg)
                         raise ConversionError(error_msg)
                 
@@ -217,7 +220,7 @@ class CloudProcessor(BaseProcessor):
         Args:
             api_key: API key for cloud processing (optional - uses rate-limited free tier without key)
             output_type: Output type for cloud processing (markdown, flat-json, html, csv, specified-fields, specified-json)
-            model_type: Model type for cloud processing (gemini, openapi)
+            model_type: Model type for cloud processing (gemini, openapi, nanonets)
             specified_fields: List of fields to extract (for specified-fields output type)
             json_schema: JSON schema defining fields and types to extract (for specified-json output type)
         """
@@ -271,7 +274,7 @@ class CloudProcessor(BaseProcessor):
         }
         
         if self.api_key:
-            logger.info(f"Created cloud extractor for {file_path} with API key - unlimited access")
+            logger.info(f"Created cloud extractor for {file_path} with freeAPI key - increased limits")
         else:
             logger.info(f"Created cloud extractor for {file_path} without API key - rate-limited access")
         
